@@ -51,14 +51,27 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Überprüfen, ob der NinjaRMM-Agent installiert ist
+# Überprüfen, ob der NinjaRMMAgent installiert ist
 if dpkg-query -W -f='${Status}' NinjaRMMAgent 2>/dev/null | grep -q "installiert"; then
   # Bestätigung einholen
-  read -p "Möchten Sie den NinjaRMM-Agent wirklich deinstallieren? (j/n): " choice
+  read -p "Möchten Sie den NinjaRMMAgent wirklich deinstallieren? (j/n): " choice
   case "$choice" in 
     j|J )
-      msg_info "Deinstalliere NinjaRMM-Agent..."
-      dpkg --purge NinjaRMMAgent && msg_ok "NinjaRMM-Agent wurde erfolgreich deinstalliert." || msg_error "Fehler bei der Deinstallation von NinjaRMM-Agent."
+      msg_info "Deinstalliere NinjaRMMAgent..."
+      # Dienst stoppen
+      systemctl stop ninjarmm-agent.service
+      # Dienst deaktivieren
+      systemctl disable ninjarmm-agent.service
+      # Dateien und Verzeichnisse entfernen
+      rm -rf /opt/NinjaRMMAgent
+      rm -f /etc/systemd/system/ninjarmm-agent.service
+      rm -f /etc/systemd/system/multi-user.target.wants/ninjarmm-agent.service
+      rm -f /lib/systemd/system/ninjarmm-agent.service
+      rm -rf /var/lib/dpkg/info/NinjaRMMAgent.*
+      # Systemd neu laden
+      systemctl daemon-reload
+      systemctl reset-failed
+      msg_ok "NinjaRMMAgent wurde erfolgreich deinstalliert."
       ;;
     n|N )
       msg_info "Deinstallation abgebrochen."
@@ -68,5 +81,5 @@ if dpkg-query -W -f='${Status}' NinjaRMMAgent 2>/dev/null | grep -q "installiert
       ;;
   esac
 else
-  msg_error "NinjaRMM-Agent ist nicht auf diesem System installiert."
+  msg_error "NinjaRMMAgent ist nicht auf diesem System installiert."
 fi
