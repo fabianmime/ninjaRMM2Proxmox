@@ -1,5 +1,8 @@
-# Install Ninja RMM 2 Proxmox by Interactive GUI
-This script Installs Ninja RMM Agent on Proxmox VE
+# Interactive Installation of Ninja RMM Agent on Proxmox VE
+This script installs the Ninja RMM Agent on Proxmox VE and prompts for the installation link before proceeding.
 
-Instructions
-...soon...
+### Instructions
+- Run Script in the Proxmox Shell
+
+```bash
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/fabianmime/ninjaRMM2Proxmox/main/ninjarmm-install.sh)"
