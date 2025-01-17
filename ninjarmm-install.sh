@@ -92,12 +92,12 @@ start_installation() {
 
 # Skript starten
 header_info
-echo -e "\nDieses Skript installiert den NinjaOne-Agenten auf Ihrem Proxmox-Server.\n"
+echo -e "\nDieses Skript installiert den NinjaOne-Agenten auf dem Proxmox-Server.\n"
 while true; do
-  read -p "Möchten Sie fortfahren? (j/n): " yn
+  read -p "Fortfahren? (j/n): " yn
   case $yn in
     [Jj]* ) start_installation; break;;
     [Nn]* ) clear; exit;;
-    * ) echo "Bitte antworten Sie mit j (ja) oder n (nein).";;
+    * ) echo "Antworten mit j (ja) oder n (nein).";;
   esac
 done
