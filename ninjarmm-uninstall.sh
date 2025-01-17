@@ -15,7 +15,7 @@ header_info() {
  | |___| (_) | | | | | | |_) | |_| | ||  __/ |       | | | |  __/ | | | (_| |
   \_____\___/|_| |_| |_| .__/ \__,_|\__\___|_|       |_|_|  \___|_| |_|\__,_|
                        | |                                                   
-                       |_|                                                                                      
+                       |_|                                                   
 EOF
 }
 
@@ -51,14 +51,20 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Überprüfen, ob der NinjaRMMAgent installiert ist
-if dpkg-query -W -f='${Status}' NinjaRMMAgent 2>/dev/null | grep -q "installiert"; then
+# Versuchen, den tatsächlichen Paketnamen des NinjaRMMAgent zu ermitteln
+PACKAGE_NAME=$(dpkg-query -W -f='${binary:Package}\n' | grep -i 'ninjarmm')
+
+if [ -n "$PACKAGE_NAME" ]; then
   # Bestätigung einholen
-  read -p "Möchten Sie den NinjaRMMAgent wirklich deinstallieren? (j/n): " choice
+  read -p "Möchten Sie den $PACKAGE_NAME wirklich deinstallieren? (j/n): " choice
   case "$choice" in 
     j|J )
-      msg_info "Deinstalliere NinjaRMMAgent..."
-      dpkg --purge NinjaRMMAgent && msg_ok "NinjaRMMAgent wurde erfolgreich deinstalliert." || msg_error "Fehler bei der Deinstallation von NinjaRMMAgent."
+      msg_info "Deinstalliere $PACKAGE_NAME..."
+      if dpkg --purge "$PACKAGE_NAME" &>/dev/null; then
+        msg_ok "$PACKAGE_NAME wurde erfolgreich deinstalliert."
+      else
+        msg_error "Fehler bei der Deinstallation von $PACKAGE_NAME."
+      fi
       ;;
     n|N )
       msg_info "Deinstallation abgebrochen."
