@@ -1,63 +1,103 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Farben für Ausgaben definieren
-RED=$(echo -e "\033[01;31m")
-YELLOW=$(echo -e "\033[33m")
-GREEN=$(echo -e "\033[1;92m")
-CLEAR=$(echo -e "\033[m")
+# Copyright (c) 2025 Computer Trend
+# Author: Fabian MiMe
+# License: MIT
+# https://github.com/fabianmime/ninjaRMM2Proxmox/blob/main/LICENSE
+
+header_info() {
+  clear
+  cat <<"EOF"
+   _____                            _              _______                 _ 
+  / ____|                          | |            |__   __|               | |
+ | |     ___  _ __ ___  _ __  _   _| |_ ___ _ __     | |_ __ ___ _ __   __| |
+ | |    / _ \| '_ ` _ \| '_ \| | | | __/ _ \ '__|    | | '__/ _ \ '_ \ / _` |
+ | |___| (_) | | | | | | |_) | |_| | ||  __/ |       | | | |  __/ | | | (_| |
+  \_____\___/|_| |_| |_| .__/ \__,_|\__\___|_|       |_|_|  \___|_| |_|\__,_|
+                       | |                                                   
+                       |_|                                                                                      
+EOF
+}
+
+# Farben für Statusmeldungen
+RD=$(echo "\033[01;31m")
+YW=$(echo "\033[33m")
+GN=$(echo "\033[1;92m")
+CL=$(echo "\033[m")
+BFR="\\r\\033[K"
+HOLD="-"
+CM="${GN}✓${CL}"
+CROSS="${RD}✗${CL}"
+
+# Fehlerbehandlung
+set -euo pipefail
+shopt -s inherit_errexit nullglob
 
 # Funktion für Informationsmeldungen
 msg_info() {
   local msg="$1"
-  echo -e " ${YELLOW}${msg}...${CLEAR}"
+  echo -ne " ${HOLD} ${YW}${msg}..."
 }
 
 # Funktion für Erfolgsmeldungen
 msg_ok() {
   local msg="$1"
-  echo -e " ${GREEN}✓ ${msg}${CLEAR}"
+  echo -e "${BFR} ${CM} ${GN}${msg}${CL}"
 }
 
 # Funktion für Fehlermeldungen
 msg_error() {
   local msg="$1"
-  echo -e " ${RED}✗ ${msg}${CLEAR}"
+  echo -e "${BFR} ${CROSS} ${RD}${msg}${CL}"
 }
 
-# Installationslink abfragen
-read -p "Bitte geben Sie den Installationslink für den NinjaOne-Agenten ein: " AGENT_URL
+# Hauptfunktion
+start_installation() {
+  header_info
 
-# Überprüfen, ob die URL nicht leer ist
-if [[ -z "$AGENT_URL" ]]; then
-  msg_error "Keine URL eingegeben. Installation abgebrochen."
-  exit 1
-fi
+  # Abfrage des Installationslinks
+  AGENT_URL=$(whiptail --inputbox "Bitte geben Sie den Installationslink für den NinjaOne-Agenten ein:" 10 60 3>&1 1>&2 2>&3)
 
-# Temporären Pfad für den Download festlegen
-AGENT_DEB="/tmp/ninjaone-agent.deb"
+  # Überprüfen, ob eine URL eingegeben wurde
+  if [[ -z "$AGENT_URL" ]]; then
+    msg_error "Kein Installationslink eingegeben. Installation abgebrochen."
+    exit 1
+  fi
 
-# Herunterladen des NinjaOne-Agenten
-msg_info "Lade NinjaOne-Agent herunter"
-curl -o "$AGENT_DEB" "$AGENT_URL"
+  # Temporären Pfad für den Download festlegen
+  AGENT_DEB="/tmp/ninjaone-agent.deb"
 
-# Überprüfen, ob der Download erfolgreich war
-if [ $? -ne 0 ]; then
-  msg_error "Fehler beim Herunterladen des NinjaOne-Agenten."
-  exit 1
-fi
+  # Herunterladen des NinjaOne-Agenten
+  msg_info "Lade NinjaOne-Agent herunter"
+  if ! curl -o "$AGENT_DEB" "$AGENT_URL" &>/dev/null; then
+    msg_error "Fehler beim Herunterladen des NinjaOne-Agenten."
+    exit 1
+  fi
+  msg_ok "Download abgeschlossen"
 
-# Installation des NinjaOne-Agenten
-msg_info "Installiere NinjaOne-Agent"
-dpkg -i "$AGENT_DEB"
+  # Installation des NinjaOne-Agenten
+  msg_info "Installiere NinjaOne-Agent"
+  if ! dpkg -i "$AGENT_DEB" &>/dev/null; then
+    msg_error "Fehler bei der Installation. Versuche, Abhängigkeiten zu beheben."
+    if ! apt-get install -f -y &>/dev/null; then
+      msg_error "Fehler beim Installieren der Abhängigkeiten."
+      exit 1
+    fi
+  fi
+  msg_ok "Installation abgeschlossen"
 
-# Überprüfen auf fehlende Abhängigkeiten und diese installieren
-if [ $? -ne 0 ]; then
-  msg_info "Überprüfe auf fehlende Abhängigkeiten"
-  apt-get install -f -y
-fi
+  # Entfernen der heruntergeladenen Datei
+  rm "$AGENT_DEB"
+}
 
-# Bereinigung
-msg_info "Entferne heruntergeladene Datei"
-rm "$AGENT_DEB"
-
-msg_ok "Installation abgeschlossen."
+# Skript starten
+header_info
+echo -e "\nDieses Skript installiert den NinjaOne-Agenten auf Ihrem Proxmox-Server.\n"
+while true; do
+  read -p "Möchten Sie fortfahren? (j/n): " yn
+  case $yn in
+    [Jj]* ) start_installation; break;;
+    [Nn]* ) clear; exit;;
+    * ) echo "Bitte antworten Sie mit j (ja) oder n (nein).";;
+  esac
+done
